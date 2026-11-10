@@ -48,10 +48,10 @@ class SupplierService:
 
     @staticmethod
     def get_by_credit_code(session: Session, credit_code: str, include_deleted: bool = False) -> Optional[Supplier]:
-        """根据信用代码查询服务商"""
+        """根据信用代码查询当前租户下的服务商（支持穿透已归档/已删除数据）"""
         query = select(Supplier).where(Supplier.credit_code == credit_code)
-        if not include_deleted:
-            query = query.where(Supplier.is_deleted == False)
+        if include_deleted:
+            query = query.execution_options(include_deleted=True)
         return session.exec(query).first()
 
     @staticmethod
@@ -83,3 +83,13 @@ class SupplierService:
         session.add(supplier)
         session.commit()
         return True
+
+    @staticmethod
+    def restore(session: Session, supplier: Supplier) -> Supplier:
+        """从回收站恢复服务商"""
+        supplier.is_deleted = False
+        supplier.updated_at = utc_now()
+        session.add(supplier)
+        session.commit()
+        session.refresh(supplier)
+        return supplier

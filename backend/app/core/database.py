@@ -18,23 +18,33 @@ engine = create_engine(
 @event.listens_for(Session, "do_orm_execute")
 def _auto_tenant_and_soft_delete_filter(execute_state):
     """
-    物理防呆过滤器（核心安全网）：
-    对所有继承 BaseModel 的数据表，自动在底层注入当前请求的 tenant_id 与 is_deleted == False 过滤。
-    即使 AI 在编写业务查询时漏写了 .where(tenant_id=...)，也绝不可能发生跨企业数据越权！
+    会话级多租户与软删除自动过滤 Hook：
+    对所有继承 BaseModel 的数据表，默认在底层注入当前请求的 tenant_id 与 is_deleted == False 过滤。
+    支持在查询时通过 .execution_options(include_deleted=True) 或 (skip_tenant_filter=True) 精确控制。
     """
     if execute_state.is_select and not execute_state.is_column_load:
-        # 支持系统管理员或特殊通道跳过租户拦截
-        if execute_state.execution_options.get("skip_tenant_filter", False):
+        skip_tenant = execute_state.execution_options.get("skip_tenant_filter", False)
+        include_deleted = execute_state.execution_options.get("include_deleted", False)
+
+        if skip_tenant and include_deleted:
             return
-        
+
         curr_tenant = get_current_tenant()
         opts = []
         for model in BaseModel.__subclasses__():
             if getattr(model, "__tablename__", None):
+                def make_criteria(cls):
+                    conditions = []
+                    if not skip_tenant:
+                        conditions.append(cls.tenant_id == curr_tenant)
+                    if not include_deleted:
+                        conditions.append(cls.is_deleted == False)
+                    return and_(*conditions) if conditions else True
+
                 opts.append(
                     with_loader_criteria(
                         model,
-                        lambda cls: and_(cls.tenant_id == curr_tenant, cls.is_deleted == False),
+                        make_criteria,
                         track_closure_variables=False
                     )
                 )

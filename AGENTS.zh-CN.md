@@ -36,7 +36,7 @@
   - 所有返回必须包裹 `success_response(data=...)` 或 `error_response(message=..., code=...)`。
   - 列表接口入参必须为 `page`、`page_size`，出参包裹 `PaginatedData`。
   - 所有业务模型必须继承 `app.models.base.BaseModel`（天然自带 id, created_at, updated_at, is_deleted, tenant_id）。
-  - **物理防呆隔离机制**：数据库底层已挂载自动租户拦截器，SELECT 查询自动注入 `tenant_id` 与未软删除条件，业务代码即便漏写也绝不越权。
+  - **租户与软删除自动过滤机制**：数据库底层挂载 Hook 自动注入当前 `tenant_id` 与未软删除条件；业务实体唯一性索引必须按 `(field, tenant_id)` 联合约束，保障各租户名录独立。
   - **角色权限切面 (RBAC)**：支持 `UserRole (admin | reviewer | operator)`，敏感接口通过 `dependencies=[Depends(require_roles([...]))]` 守门。
   - 严禁硬删除，一律 `is_deleted = True` 软删除。状态机必须使用 `str, Enum`。
   - **一键重置指令**：执行 `python run.py --reset-db` 秒级全量重建最新表结构与干净种子。

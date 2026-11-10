@@ -11,10 +11,11 @@ class UserRole(str, Enum):
 
 def get_current_role(request: Request) -> UserRole:
     """
-    从请求头 X-User-Role 提取当前用户角色。
-    默认 fallback 到 'admin'，确保本地原型开发与前端初始联调时不被死板阻拦。
+    从请求头 X-User-Role 提取当前用户角色（原型与测试桩模式）。
+    遵循 Fail-Closed 原则，未显式声明时默认为最低权限 OPERATOR。
+    在生产环境中，此信息必须从校验通过的 JWT Token Claim 中获取。
     """
-    raw_role = request.headers.get("X-User-Role", "admin").lower()
+    raw_role = request.headers.get("X-User-Role", "operator").lower()
     try:
         return UserRole(raw_role)
     except ValueError:

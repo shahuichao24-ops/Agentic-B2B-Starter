@@ -55,10 +55,10 @@ Agentic-B2B-Starter/
 
 ### 2. 后端：强契约与企业级防御
 - **三层严格分工**：`models/` (模型与 DTO)、`services/` (业务事务)、`api/v1/` (路由与契约外壳)。
-- **统一响应契约**：所有接口统一包裹 `success_response(data=...)` 或 `error_response(...)`。
-- **标准分页机制**：出参标准化包裹 `PaginatedData`，入参强制校验 `page` 与 `page_size`。
-- **多租户与软删除物理防呆**：底座模型自带审计字段；数据库查询拦截器自动过滤 `is_deleted` 与当前 `tenant_id`，防止跨租户越权。
-- **异常优雅处理**：统一拦截 `IntegrityError`（数据库唯一性冲突）与 `RequestValidationError`，输出清晰业务报错，不向前端吐裸露堆栈。
+- **统一响应契约**：所有接口统一包裹 `success_response(data=...)` 或 `error_response(...)`。HTTP 401/403/404/405 与数据库完整性冲突由全局拦截器统一捕获并包装，绝不裸露底层堆栈。
+- **租户级查询软过滤（原型模式）**：数据库会话底层自动注入当前请求的 `tenant_id` 与未软删除条件。*(注：当前为 Header 上下文原型模式；生产环境需从校验签名的 JWT Claim 提取)*。
+- **软删除与恢复闭环**：数据删除默认标为 `is_deleted = True` 保留审计痕迹，并配有对应的恢复接口（`/restore`）。
+- **租户独立唯一索引**：服务商代码采用 `(credit_code, tenant_id)` 联合唯一约束，不同租户可独立维护私有档案名录。
 
 ---
 
@@ -122,7 +122,7 @@ pnpm dev
 
 - 本项目基于 [MIT License](LICENSE) 开源。
 - **致谢与上游声明**：
-  - 前端交互组件基底参考并重构自 [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT License），在此基础上深度融入了 Apple HIG Inset Grouped 视觉体系、Toolbar 控件流与 Agentic 规范约束；
+  - 前端交互组件基底参考自 [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin)（MIT License），在此基础上定制了 Apple HIG 设计 Token、Toolbar 控件流与 Agentic 规范约束；
   - 后端架构由 FastAPI 与 SQLModel 强驱动。
 
 ---

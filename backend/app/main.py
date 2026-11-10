@@ -52,6 +52,12 @@ from sqlalchemy.exc import IntegrityError
 async def integrity_exception_handler(request: Request, exc: IntegrityError):
     return error_response(message="数据冲突或已被占用（违反数据唯一性约束）", code=status.HTTP_400_BAD_REQUEST)
 
+# HTTP 框架异常捕获（覆盖 RBAC 403 / 404 / 405 等，确保统一返回规范外壳）
+from starlette.exceptions import HTTPException as StarletteHTTPException
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return error_response(message=str(exc.detail), code=exc.status_code)
+
 # 挂载 API 路由
 app.include_router(api_router, prefix=settings.API_V1_STR)
 

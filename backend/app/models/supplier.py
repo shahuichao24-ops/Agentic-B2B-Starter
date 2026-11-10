@@ -2,6 +2,7 @@ from enum import Enum
 from typing import Optional
 from datetime import datetime
 from sqlmodel import Field, SQLModel
+from sqlalchemy import UniqueConstraint
 from app.models.base import BaseModel
 
 class SupplierStatus(str, Enum):
@@ -14,9 +15,12 @@ class SupplierStatus(str, Enum):
 class Supplier(BaseModel, table=True):
     """服务商数据表"""
     __tablename__ = "suppliers"
+    __table_args__ = (
+        UniqueConstraint("credit_code", "tenant_id", name="uq_supplier_credit_code_tenant"),
+    )
 
     name: str = Field(index=True, nullable=False, description="企业名称")
-    credit_code: str = Field(index=True, unique=True, nullable=False, description="统一社会信用代码")
+    credit_code: str = Field(index=True, nullable=False, description="统一社会信用代码")
     contact_person: str = Field(nullable=False, description="联系人姓名")
     contact_phone: str = Field(nullable=False, description="联系电话")
     status: SupplierStatus = Field(default=SupplierStatus.PENDING, index=True, nullable=False, description="准入审核状态")

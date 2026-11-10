@@ -35,7 +35,7 @@
   - All endpoint returns must wrap `success_response(data=...)` or `error_response(message=..., code=...)`.
   - List endpoints must accept `page` and `page_size` and return `PaginatedData`.
   - All business models must inherit `app.models.base.BaseModel` (inheriting `id`, `created_at`, `updated_at`, `is_deleted`, `tenant_id`).
-  - **Physical Tenant Isolation**: Database layer hooks automatically inject `tenant_id` and `is_deleted == False` into SELECT queries, physically preventing cross-tenant access even if forgotten by the developer.
+  - **Tenant-Scoped Query Filter**: Database layer hooks automatically inject current `tenant_id` and `is_deleted == False` into SELECT queries. Unique constraints on business entities must be scoped by `(field, tenant_id)`.
   - **Role-Based Access Control (RBAC)**: Support `UserRole (admin | reviewer | operator)`; sensitive routes must be guarded by `dependencies=[Depends(require_roles([...]))]`.
   - Forbid hard deletes: always use `is_deleted = True`. State machines must inherit `str, Enum`.
   - **One-Click Reset**: Run `python run.py --reset-db` to rebuild fresh schemas and seed data instantly.

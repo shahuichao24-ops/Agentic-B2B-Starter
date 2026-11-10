@@ -55,10 +55,10 @@ Agentic-B2B-Starter/
 
 ### 2. Backend: Contract-First & Defense-in-Depth
 - **Strict 3-Layer Architecture**: Clean isolation across `models/` (entities & DTOs), `services/` (business logic), and `api/v1/` (routers & response envelopes).
-- **Unified Response Envelopes**: All endpoints return structured `ApiResponse(code, message, data)`.
-- **Physical Multi-Tenant Isolation**: Database session queries automatically inject `tenant_id` filters via low-level interceptors, physically preventing cross-tenant data leaks.
-- **Soft-Delete by Default**: Prevents accidental physical data wiping (`is_deleted = True` with audit timestamps).
-- **Graceful Constraint Handling**: Intercepts `IntegrityError` and `RequestValidationError` cleanly into HTTP 400/422 envelopes without leaking internal tracebacks.
+- **Unified Response Envelopes**: All endpoints return structured `ApiResponse(code, message, data)`. HTTP 401/403/404/405 and database integrity exceptions are globally intercepted into unified envelopes.
+- **Tenant-Scoped Query Filter (Prototype Mode)**: Database session hooks automatically inject `tenant_id` and `is_deleted == False` into query criteria. *(Note: Prototype implementation uses `X-Tenant-Id` header context; production deployments must derive tenant identity from verified JWT claims).*
+- **Soft-Delete with Recovery**: Prevents physical data loss (`is_deleted = True` with audit timestamps) and provides explicit restore endpoints.
+- **Tenant-Aware Unique Constraints**: Unique indexes (e.g. `(credit_code, tenant_id)`) are scoped per tenant so different organizations can independently manage records.
 
 ---
 
@@ -122,7 +122,7 @@ When collaborating in Cursor, Claude Code, or Antigravity, inject `AGENTS.md` in
 
 - Released under the [MIT License](LICENSE).
 - **Acknowledgments & Upstream Attribution**:
-  - The frontend dashboard foundation is adapted from [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin) (MIT License), extensively re-engineered with Apple HIG Inset Grouped visual hierarchy, compact toolbar streams, and Agentic design governance.
+  - The frontend dashboard foundation is adapted from [satnaing/shadcn-admin](https://github.com/satnaing/shadcn-admin) (MIT License), customized with Apple HIG design tokens, compact toolbar streams, and Agentic design governance.
   - The backend is powered by FastAPI and SQLModel.
 
 ---

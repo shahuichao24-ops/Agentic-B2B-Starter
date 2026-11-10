@@ -16,9 +16,12 @@ def set_current_tenant(tenant_id: str):
 
 class TenantMiddleware(BaseHTTPMiddleware):
     """
-    多租户物理防呆中间件：
-    从请求头 X-Tenant-Id 提取租户标识，自动注入当前协程上下文。
+    多租户会话隔离中间件（原型验证与开发模式）：
+    从请求头 X-Tenant-Id 提取租户标识，自动注入当前协程上下文供数据库 Hook 自动过滤。
     若未传则默认 fallback 到 'default'，确保单租户/本地开发零配置无感运行。
+    
+    【生产提示】：
+    生产环境下租户身份必须从已签名的 JWT Token Claim 中获取，严禁直接信任未鉴权的 HTTP Header。
     """
     async def dispatch(self, request: Request, call_next):
         tenant_id = request.headers.get("X-Tenant-Id") or "default"

@@ -1,10 +1,11 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query, Path
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.core.database import get_session
 from app.core.response import ApiResponse, success_response, error_response
 from app.core.security import UserRole, require_roles
 from app.models.supplier import (
+    Supplier,
     SupplierStatus,
     SupplierCreate,
     SupplierReview,
@@ -43,7 +44,7 @@ def create_supplier(
     existing = SupplierService.get_by_credit_code(session, data.credit_code, include_deleted=True)
     if existing:
         if existing.is_deleted:
-            return error_response(message=f"统一社会信用代码 {data.credit_code} 处于已归档状态，请联系管理员", code=400)
+            return error_response(message=f"统一社会信用代码 {data.credit_code} 处于已归档状态，可调用恢复接口重新激活", code=400)
         return error_response(message=f"统一社会信用代码 {data.credit_code} 已存在，请勿重复录入", code=400)
 
     supplier = SupplierService.create(session, data)
@@ -97,3 +98,21 @@ def delete_supplier(
     
     SupplierService.soft_delete(session, supplier)
     return success_response(data=True, message="服务商已移至回收站")
+
+@router.post(
+    "/{supplier_id}/restore",
+    response_model=ApiResponse[SupplierRead],
+    summary="从回收站恢复服务商",
+    dependencies=[Depends(require_roles([UserRole.ADMIN]))]
+)
+def restore_supplier(
+    supplier_id: int = Path(..., description="服务商主键 ID"),
+    session: Session = Depends(get_session)
+):
+    query = select(Supplier).where(Supplier.id == supplier_id).execution_options(include_deleted=True)
+    supplier = session.exec(query).first()
+    if not supplier or not supplier.is_deleted:
+        return error_response(message="未找到处于已删除状态的服务商", code=404)
+    
+    restored = SupplierService.restore(session, supplier)
+    return success_response(data=restored, message="服务商已成功恢复")
